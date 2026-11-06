@@ -4,7 +4,9 @@ const Listing = require("./models/listing.js")
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
-
+const wrapAsync = require("./utils/wrapAsync.js")
+const ExpressError = require("./utils/ExpressError.js")
+const listingSchema = require("./schema.js")
 
 const app = express();
 const port = 8080;
@@ -31,10 +33,21 @@ app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname,"/public")))
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "/public")))
 app.use(methodOverride("_method"));
-app.engine("ejs",ejsMate);
+app.engine("ejs", ejsMate);
 
+
+const valadatelisting = (req,res,next)=>{
+    const { error, value } = listingSchema.validate(req.body);
+
+    if (error) {
+        throw new ExpressError(400, error.details[0].message);
+    }else{
+        next()
+    }
+}
 
 
 
@@ -61,11 +74,11 @@ app.get("/", (req, res) => {
 // })
 
 // index route 
-app.get("/listing", async (req, res) => {
+app.get("/listing", wrapAsync(async (req, res) => {
     let allListing = await Listing.find();
     res.render("listings/index.ejs", { allListing });
 
-})
+}))
 
 
 // new route 
@@ -75,15 +88,14 @@ app.get("/listing/new", (req, res) => {
 
 
 // show route 
-app.get("/listing/:id", async (req, res) => {
+app.get("/listing/:id", wrapAsync(async (req, res) => {
     let { id } = req.params;
     const listing = await Listing.findById(id);
     res.render("listings/show.ejs", { listing });
-})
+}))
 
 // create route 
-app.post("/listing", async (req, res) => {
-    let { title, description, price, location, country, image } = req.body;
+app.post("/listing",valadatelisting, wrapAsync(async (req, res, next) => {
     const newListing = new Listing({
         title: title,
         description: description,
@@ -99,17 +111,17 @@ app.post("/listing", async (req, res) => {
 
     res.redirect("listing");
 
-})
+}))
 
 
 // update route 
-app.get("/listing/:id/edit", async (req, res) => {
+app.get("/listing/:id/edit", wrapAsync(async (req, res) => {
     let { id } = req.params;
     const listing = await Listing.findById(id);
     res.render("listings/edit.ejs", { listing });
-})
+}))
 
-app.put("/listing/:id", async (req, res) => {
+app.put("/listing/:id", valadatelisting , wrapAsync(async (req, res) => {
     let { id } = req.params;
     let { title, description, price } = req.body;
 
@@ -128,18 +140,31 @@ app.put("/listing/:id", async (req, res) => {
 
     console.log(updatedListing);
     res.redirect(`/listing/${id}`);
-})
+}))
 
 
 // destroy route 
 
-app.delete("/listing/:id", async (req, res) => {
+app.delete("/listing/:id", wrapAsync(async (req, res) => {
     let { id } = req.params;
     let delListing = await Listing.findByIdAndDelete(id);
     console.log(delListing);
     res.redirect("/listing");
+}))
+
+
+app.all("/{*any}", (req, res, next) => {
+    next(new ExpressError(404, "Page not fount ."))
 })
 
+
+
+
+app.use((err, req, res, next) => {
+    let { statusCode = 500, message = "Something went worng " } = err;
+    res.status(statusCode).render("error.ejs", { message })
+    // res.status(statusCode).send(message);
+})
 
 app.listen(port, () => {
     console.log(`listining on port ${port} ....`)
