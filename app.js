@@ -1,12 +1,14 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const Listing = require("./models/listing.js")
+const Review = require("./models/review.js")
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 const wrapAsync = require("./utils/wrapAsync.js")
 const ExpressError = require("./utils/ExpressError.js")
 const listingSchema = require("./schema.js")
+const reviewSchema = require("./schema.js")
 
 const app = express();
 const port = 8080;
@@ -39,15 +41,27 @@ app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);
 
 
-const valadatelisting = (req,res,next)=>{
+const valadatelisting = (req, res, next) => {
     const { error, value } = listingSchema.validate(req.body);
 
     if (error) {
         throw new ExpressError(400, error.details[0].message);
-    }else{
+    } else {
         next()
     }
 }
+
+const valadatereview = (req, res, next) => {
+    const { error, value } = reviewSchema.validate(req.body);
+
+    if (error) {
+        throw new ExpressError(400, error.details[0].message);
+    } else {
+        next()
+    }
+}
+
+// post review middle ware for listing delete 
 
 
 
@@ -90,12 +104,12 @@ app.get("/listing/new", (req, res) => {
 // show route 
 app.get("/listing/:id", wrapAsync(async (req, res) => {
     let { id } = req.params;
-    const listing = await Listing.findById(id);
+    const listing = await Listing.findById(id).populate("reviews");
     res.render("listings/show.ejs", { listing });
 }))
 
 // create route 
-app.post("/listing",valadatelisting, wrapAsync(async (req, res, next) => {
+app.post("/listing", valadatelisting, wrapAsync(async (req, res, next) => {
     const newListing = new Listing({
         title: title,
         description: description,
@@ -121,7 +135,7 @@ app.get("/listing/:id/edit", wrapAsync(async (req, res) => {
     res.render("listings/edit.ejs", { listing });
 }))
 
-app.put("/listing/:id", valadatelisting , wrapAsync(async (req, res) => {
+app.put("/listing/:id", valadatelisting, wrapAsync(async (req, res) => {
     let { id } = req.params;
     let { title, description, price } = req.body;
 
@@ -153,12 +167,32 @@ app.delete("/listing/:id", wrapAsync(async (req, res) => {
 }))
 
 
+
+
+
+// review section 
+//post review route
+app.post("/listing/:id/reviews", valadatereview, wrapAsync(async (req, res) => {
+    let listing = await Listing.findById(req.params.id);
+    let newReview = new Review(req.body.reviews)
+    listing.reviews.push(newReview);
+    await newReview.save();
+    await listing.save();
+    res.redirect(`/listing/${req.params.id}`)
+}))
+
+// delete route for review 
+app.delete("/listing/:id/reviews/:reviewid",wrapAsync(async (req,res)=>{
+    let {id , reviewid} = req.params;
+    await Listing.findByIdAndUpdate(id,{$pull :{reviews : reviewid}})
+    await Review.findByIdAndDelete(reviewid);
+    res.redirect(`/listing/${id}`);
+}))
+
+
 app.all("/{*any}", (req, res, next) => {
     next(new ExpressError(404, "Page not fount ."))
 })
-
-
-
 
 app.use((err, req, res, next) => {
     let { statusCode = 500, message = "Something went worng " } = err;
