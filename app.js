@@ -4,6 +4,8 @@ const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 const ExpressError = require("./utils/ExpressError.js")
+const session = require("express-session");
+const flash = require("connect-flash");
 
 
 const listings = require("./routes/listing.js");
@@ -40,19 +42,40 @@ app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);
 
 
-
-
-
-// post review middle ware for listing delete 
-
+const sessionOption = {
+    secret: "mysupersecrate",
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        maxAge :7 * 24 * 60 * 60 * 1000,
+        HttpOnly :true
+    }
+}
 
 app.get("/", (req, res) => {
     res.send("root path");
 })
 
-app.use("/listing",listings);
 
-app.use("/listing/:id/reviews",reviews);
+app.use(session(sessionOption))
+app.use(flash())
+
+
+
+
+// post review middle ware for listing delete 
+
+app.use((req,res,next)=>{
+    res.locals.succesMsg = req.flash("success");
+    res.locals.errorMsg = req.flash("error");
+    next();
+})
+
+
+app.use("/listing", listings);
+
+app.use("/listing/:id/reviews", reviews);
 
 
 app.all("/{*any}", (req, res, next) => {

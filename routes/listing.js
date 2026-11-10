@@ -4,7 +4,7 @@ const router = express.Router();
 
 const Listing = require("../models/listing.js")
 const wrapAsync = require("../utils/wrapAsync.js")
-const listingSchema = require("../schema.js")
+const { listingSchema } = require("../schema.js")
 const ExpressError = require("../utils/ExpressError.js")
 
 const valadatelisting = (req, res, next) => {
@@ -38,33 +38,46 @@ router.get("/new", (req, res) => {
 router.get("/:id", wrapAsync(async (req, res) => {
     let { id } = req.params;
     const listing = await Listing.findById(id).populate("reviews");
+    if(!listing){
+        req.flash("error", "listing Not found");
+        return res.redirect("/listing");
+    }
     res.render("listings/show.ejs", { listing });
 }))
 
 // create route 
-router.post("/", valadatelisting, wrapAsync(async (req, res, next) => {
+router.post("/", valadatelisting, wrapAsync(async (req, res) => {
+
+    const { title, description, price, location, country, image } = req.body;
+
     const newListing = new Listing({
-        title: title,
-        description: description,
-        price: price,
-        location: location,
-        country: country,
+        title,
+        description,
+        price,
+        location,
+        country,
         image: {
             url: image
         }
-    })
+    });
+
     await newListing.save();
-    console.log("data add complected");
 
-    res.redirect("listing");
+    req.flash("success", "New listing created");
 
-}))
+    res.redirect("/listing");
+
+}));
 
 
 // update route 
 router.get("/:id/edit", wrapAsync(async (req, res) => {
     let { id } = req.params;
     const listing = await Listing.findById(id);
+    if(!listing){
+        req.flash("error", "listing Not found");
+        return res.redirect("/listing");
+    }
     res.render("listings/edit.ejs", { listing });
 }))
 
@@ -85,6 +98,9 @@ router.put("/:id", valadatelisting, wrapAsync(async (req, res) => {
         }
     );
 
+    req.flash("success", "Listing Updated");
+
+
     console.log(updatedListing);
     res.redirect(`/listing/${id}`);
 }))
@@ -95,6 +111,7 @@ router.put("/:id", valadatelisting, wrapAsync(async (req, res) => {
 router.delete("/:id", wrapAsync(async (req, res) => {
     let { id } = req.params;
     let delListing = await Listing.findByIdAndDelete(id);
+    req.flash("success", "Listing Deleted");
     console.log(delListing);
     res.redirect("/listing");
 }))
