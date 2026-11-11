@@ -6,10 +6,13 @@ const ejsMate = require("ejs-mate");
 const ExpressError = require("./utils/ExpressError.js")
 const session = require("express-session");
 const flash = require("connect-flash");
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
+const User = require("./models/user.js")
 
-
-const listings = require("./routes/listing.js");
-const reviews = require("./routes/review.js");
+const listingsRouter = require("./routes/listing.js");
+const reviewsRouter = require("./routes/review.js");
+const userRouter = require("./routes/user.js");
 
 const app = express();
 const port = 8080;
@@ -53,18 +56,27 @@ const sessionOption = {
     }
 }
 
+
+
+
 app.get("/", (req, res) => {
     res.send("root path");
 })
-
 
 app.use(session(sessionOption))
 app.use(flash())
 
 
+app.use(passport.initialize());  
+app.use(passport.session());
 
 
-// post review middle ware for listing delete 
+passport.use(new LocalStrategy(User.authenticate()));
+
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
 
 app.use((req,res,next)=>{
     res.locals.succesMsg = req.flash("success");
@@ -73,9 +85,24 @@ app.use((req,res,next)=>{
 })
 
 
-app.use("/listing", listings);
 
-app.use("/listing/:id/reviews", reviews);
+// post review middle ware for listing delete 
+
+// // demo user 
+// app.get("/demouser",async (req,res)=>{
+//     let fakeUser = new User({
+//         email : "student@gmail.com",
+//         username : "delta-student",
+//     })
+
+//     let regisisterUser = await User.register(fakeUser,"student123")
+//     res.send(regisisterUser)
+// })
+
+
+app.use("/listing", listingsRouter);
+app.use("/listing/:id/reviews", reviewsRouter);
+app.use("/", userRouter);
 
 
 app.all("/{*any}", (req, res, next) => {
