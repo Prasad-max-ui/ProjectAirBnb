@@ -1,3 +1,9 @@
+if (process.env.NODE_ENV != "production") {
+    require('dotenv').config()
+}
+
+
+
 const express = require("express");
 const mongoose = require("mongoose");
 const path = require("path");
@@ -51,8 +57,8 @@ const sessionOption = {
     saveUninitialized: true,
     cookie: {
         expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-        maxAge :7 * 24 * 60 * 60 * 1000,
-        HttpOnly :true
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        HttpOnly: true
     }
 }
 
@@ -67,7 +73,7 @@ app.use(session(sessionOption))
 app.use(flash())
 
 
-app.use(passport.initialize());  
+app.use(passport.initialize());
 app.use(passport.session());
 
 
@@ -78,7 +84,7 @@ passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
 
-app.use((req,res,next)=>{
+app.use((req, res, next) => {
     res.locals.succesMsg = req.flash("success");
     res.locals.errorMsg = req.flash("error");
     res.locals.currUser = req.user;
