@@ -24,12 +24,12 @@ router.route("/new")
 // index route  and create route 
 router.route("/")
     .get(wrapAsync(listingController.index))
-    .post(isLoggedIn,upload.single("image"), valadatelisting, wrapAsync(listingController.createListing));
+    .post(isLoggedIn, upload.single("image"), valadatelisting, wrapAsync(listingController.createListing));
 
 //  show route ,update route ,  destroy route 
 router.route("/:id")
     .get(wrapAsync(listingController.showListing))
-    .put(isLoggedIn, valadatelisting, wrapAsync(listingController.updateListing))
+    .put(isLoggedIn, upload.single("image"), valadatelisting, wrapAsync(listingController.updateListing))
     .delete(isLoggedIn, isOwner, wrapAsync(listingController.destroyListing))
 
 

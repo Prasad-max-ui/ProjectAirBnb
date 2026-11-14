@@ -119,3 +119,13 @@ body {
     gap: 20px;
     margin-top: 20px;
 }
+
+
+
+
+/* map */
+
+#map {
+    height: 350px;
+    width: 85vh;
+}
