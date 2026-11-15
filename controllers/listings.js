@@ -26,16 +26,21 @@ module.exports.showListing = async (req, res) => {
 
 
 module.exports.createListing = async (req, res) => {
-    let responce = await geocodingClient.forwardGeocode({
-        query: req.body.location,
-        limit: 1
-    })
-        .send();
-
-    let url = req.file.path;
-    let filename = req.file.filename;
 
     const { title, description, price, location, country } = req.body;
+
+    const response = await geocodingClient.forwardGeocode({
+        query: location,
+        limit: 1
+    }).send();
+
+    // Check if Mapbox found the location
+    if (!response.body.features.length) {
+        req.flash("error", "Location not found");
+        return res.redirect("/listing/new");
+    }
+
+    const geometry = response.body.features[0].geometry;
 
     const newListing = new Listing({
         title,
@@ -46,19 +51,16 @@ module.exports.createListing = async (req, res) => {
         image: {
             filename: req.file.filename,
             url: req.file.path
-        }
+        },
+        geometry: geometry,
+        owner: req.user._id
     });
-    newListing.owner = req.user._id;
-    newListing.geometry  = responce.body.features[0].geometry;
 
-    let saveedlisting = await newListing.save();
-    console.log(saveedlisting)
+    await newListing.save();
 
     req.flash("success", "New listing created");
-
     res.redirect("/listing");
-
-}
+};
 
 module.exports.renderEditForm = async (req, res) => {
     let { id } = req.params;

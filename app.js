@@ -65,9 +65,9 @@ const sessionOption = {
 
 
 
-app.get("/", (req, res) => {
-    res.send("root path");
-})
+// app.get("/", (req, res) => {
+//     res.send("root path");
+// })
 
 app.use(session(sessionOption))
 app.use(flash())
