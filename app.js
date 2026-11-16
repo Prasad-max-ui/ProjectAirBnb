@@ -11,6 +11,7 @@ const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
 const ExpressError = require("./utils/ExpressError.js")
 const session = require("express-session");
+const MongoStore = require("connect-mongo").default;
 const flash = require("connect-flash");
 const passport = require("passport");
 const LocalStrategy = require("passport-local");
@@ -25,8 +26,7 @@ const port = 8080;
 
 
 
-
-const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
+const dbUrl = process.env.ATLAS_DB_URL;
 
 main()
     .then(() => {
@@ -35,7 +35,7 @@ main()
     .catch((err) => { console.log(err) });
 
 async function main() {
-    await mongoose.connect(MONGO_URL);
+    await mongoose.connect(dbUrl);
 
     // use `await mongoose.connect('mongodb://user:password@127.0.0.1:27017/test');` if your database has auth enabled
 }
@@ -51,8 +51,23 @@ app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);
 
 
+const store = MongoStore.create({
+    mongoUrl : dbUrl,
+    crypto:{
+        secret: process.env.SECRET
+    },
+    touchAfter:24*3600,
+})
+
+store.on("error",(err)=>{
+    console.log("ERROR in MONGO SESION",err)
+})
+
+
+
 const sessionOption = {
-    secret: "mysupersecrate",
+    store,
+    secret: process.env.SECRET,
     resave: false,
     saveUninitialized: true,
     cookie: {
@@ -61,8 +76,6 @@ const sessionOption = {
         HttpOnly: true
     }
 }
-
-
 
 
 // app.get("/", (req, res) => {
